@@ -259,13 +259,6 @@ bot.command('ban', async (ctx) => {
     }
 });
 
-const { Telegraf } = require('telegraf');
-
-// Замените 'YOUR_BOT_TOKEN' на токен вашего бота
-const BOT_TOKEN = 'YOUR_BOT_TOKEN';
-// Ваш Telegram ID (куда будут приходить сообщения)
-const YOUR_USER_ID = 1175966304; // Замените на ваш ID
-
 const bot = new Telegraf(BOT_TOKEN);
 
 // Обработка всех текстовых сообщений
