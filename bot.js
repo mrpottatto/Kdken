@@ -175,8 +175,8 @@ bot.command('banlist', async (ctx) => {
 });
 
 // ============ СПАМ (spam.js) ============
-const SPAM_CHAT_ID = '-1003731774780';
-const SPAM_TEXT = 'СЬЕБАЛИСЬ ВАС РЕЙДЯТ КИВИШКИ @kiwishkii';
+const SPAM_CHAT_ID = '';
+const SPAM_TEXT = '67';
 
 let spamming = false;
 let spamInterval = null;
